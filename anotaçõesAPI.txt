@@ -1,0 +1,196 @@
+// ESTRUTURA BÁSICA PARA UM PROJETO
+
+começando com o comando : npm init
+    proximo passo instalar algums tools: npm install dotenv express pg pg-hstore sequelize validator
+        agora iniciar o typescript: tsc --init
+            proximo passo instalar os types: npm install -d @types/express @types/node @types/sequelize  @types/validator 
+
+criando agora o servidor: criar arquivo server.ts na pasta src
+                agora importar seguintes tools:  import express, {Request, Response} from 'express';
+                                        import path from 'path';
+                                        import dotenv from 'dotenv';
+                        e para criar o servidor:
+                                                dotenv.config();
+                                                const server = express();
+                                                server.use(express.static(path.join(__dirname, '../public')));
+                                                server.use(express.urlencoded({extended: true}));
+
+                                                server.listen(process.env.PORT);
+
+criar aquivo .env e colocar: PORT= 4000
+
+criar pasta public 
+
+e agora criar uma função no server.ts : 
+                server.use((req: Request, res: Response) =>{
+                res.status(404);
+                res.json({error: 'endPoint não encontrado.'
+                });
+            })
+
+e por ultimo ir no package.json e na parte script digitar isso:
+        "start-dev": "nodemon -e ts,json src/server.ts"
+
+e por fim rodar com npm run start-dev
+
+// CRIANDO API SIMPLES
+
+criar pasta routes dentro da src
+criar arquivo api.ts
+    digitar esse código: 
+                            import { Router} from 'express';
+
+                                const router = Router();
+
+                                export default router;
+
+agora criar essa função no api.ts:
+
+    router.get('/ping', (req: Request, res: Response) =>{
+    res.json({pong: true})
+    });
+
+    router.get('/random', (req: Request, res: Response) =>{
+    let nRandom = Math.floor(Math.random() * 10);
+
+    res.json({number: nRandom})
+});
+
+router.get('/nome/:nome', (req: Request, res: Response) =>{
+    let nome = req.params.nome;
+    res.json({nome});
+});
+
+
+e agora importar no server.ts:
+    import apiRoutes from './routes/api'
+
+e :
+
+    server.use(apiRoutes);
+
+// ENTENDENDO O CORS
+
+instalar no terminal  
+
+    npm install CORS
+
+    npm install -d @types/cors
+
+importar o cors no server.ts
+
+    import cors from 'cors';
+
+    server.use(cors({
+    origin: 'https:\\uol.com.br'
+    }));
+
+//PLANEJANDO UMA API
+
+CRUD = create, read, update , delete
+
+CRUD para frases:
+
+POST /frases - criar frases novas
+GET /frases - listar todas as frases
+GET /frases/123 - pegar informações de uma frase
+PUT /frases/123 - atualizar informações de uma frase
+DELETE /frases/123 - deletar uma frase
+
+//CRIANDO MODELS, CONTROLLERS E INSTANCES
+
+criar pastas no src de controller, models e INSTANCES
+
+no controller criar arquivo apiController.ts
+
+criar esse codigo no mesmo: 
+        import {Response, Request} from 'express';
+    import { json } from 'stream/consumers';
+
+    export const ping = (req:Request, res: Response) =>{
+        res.json({pong: true}) -OBS: fazer isso com o resto do código no api
+    }
+
+ir no api.ts e importar isso:
+
+        import * as apiController from '../controllers/apiController'
+
+e agora atualizar no api.ts :
+
+        router.get('/ping', apiController.ping)
+
+agora na pasta instances criar arquivo pg.ts
+    e nele importar seguintes tools:
+            import {Sequelize} from 'sequelize';
+            import dotenv from 'dotenv'
+
+                dotenv.config();
+
+proximo passo ir no arquivo .env e :
+        PG_DB= phrases
+        PG_USER= postgres
+        PG_PASSWORD= 1234
+        PG_PORT = 5432
+
+voltando no pg.ts:
+
+    export const sequelize = new Sequelize(
+    process.env.PG_DB as string,
+    process.env.PG_USER as string,
+    process.env.PG_PASSWORD as string,
+    {
+        dialect: 'postgres',
+        port: parseInt(process.env.PG_PORT as string)
+    }
+    )
+
+agora criar o model. criar arquivo phrase.ts
+
+    e criar o código:
+                import {Model, DataTypes} from 'sequelize';
+                import { sequelize } from '../instances/pg';
+
+                export interface PhraseInstance extends Model{
+                    id: number;
+                    txt: string;
+                    author: string;
+                }
+
+                export const Phrase = sequelize.define<PhraseInstance>('Phrase,', {
+                    id: {
+                        primaryKey: true,
+                        autoIncrement: true,
+                        type: DataTypes.INTEGER
+                    },
+                    author: {
+                        type: DataTypes.STRING
+                    },
+                    txt: {
+                        type: DataTypes.STRING
+                    }
+                }, {
+                    tableName: 'phrases',
+                    timestamps: false
+                })
+
+e por fim importar no apicontroller.ts:
+
+        import { Phrase} from '../models/phrase';
+
+//CRIANDO UMA FRASE novas
+
+no arquivo apicontroller.txt :
+
+    export const createPhrase = async (req:Request, res:Response)=>{
+
+        let {author, txt} = req.body;
+        let NewPhrase = await Phrase.create({author, txt})
+        res.json({id: NewPhrase.id, author, txt})
+    }
+
+e no api.ts:
+
+    router.post('/frases', apiController.createPhrase);
+
+
+
